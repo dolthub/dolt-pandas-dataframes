@@ -10,6 +10,10 @@ from sqlalchemy import (
 )
 from pprint import pprint
 
+
+'''
+Resets the database to the initial commit of creating the repository.
+'''
 def reset_database(engine):
     metadata_obj = MetaData()
 
@@ -23,6 +27,9 @@ def reset_database(engine):
 
         dolt_reset_hard(engine, init_commit_hash)
 
+'''
+Resets only the first/HEAD commit of the database.
+'''
 def reset_database_head(engine):
     metadata_obj = MetaData()
 
@@ -36,6 +43,9 @@ def reset_database_head(engine):
 
         dolt_reset_hard(engine, init_commit_hash)
 
+'''
+Deletes all the local branches except for `main` and `master` branches.
+'''
 def delete_non_main_branches(engine):
     metadata_obj = MetaData()
 
@@ -71,13 +81,19 @@ def insert_data(engine, table_name, data):
         conn.execute(stmt)
         conn.commit()
 
+'''
+Drops given table from the database.
+'''
 def drop_table(engine, table_name):
     if not engine.dialect.has_table(engine, table_name):
         print("Table not found: "+ table)
     else:
         table = load_table(engine, table_name)
         table.drop(engine)
-        
+
+'''
+Commits the current working set using given author and message information.
+'''
 def dolt_commit(engine, author, message):
     # Dolt exposes version control writes as procedures
     # Here, we use text to execute procedures.
@@ -109,6 +125,9 @@ def dolt_commit(engine, author, message):
         if ( commit ): 
             print("Created commit: " + commit )
 
+'''
+Resets the database to given commit.
+'''
 def dolt_reset_hard(engine, commit):
     if ( commit ):
         stmt = text("CALL DOLT_RESET('--hard', '" + commit + "')")
@@ -121,6 +140,9 @@ def dolt_reset_hard(engine, commit):
         results = conn.execute(stmt)
         conn.commit()
 
+'''
+Creates a new local branch with given name. It also checks if the branch exists prior to creating it.
+'''
 def dolt_create_branch(engine, branch):
     # Check if branch exists
     metadata_obj = MetaData()
@@ -140,6 +162,9 @@ def dolt_create_branch(engine, branch):
         results = conn.execute(stmt)
         print("Created branch: " + branch)
 
+'''
+Connects to the server at given database and branch
+'''
 def dolt_checkout(db, branch):
     engine_base = "mysql+mysqlconnector://root@127.0.0.1:3306/" + db
     # Branches can be "checked out" via connection string. We make heavy use
@@ -151,6 +176,9 @@ def dolt_checkout(db, branch):
     print("Using branch: " + branch)
     return engine
 
+'''
+Merges given branch to local branch.
+'''
 def dolt_merge(engine, branch):
     stmt = text("CALL DOLT_MERGE('" + branch + "')")
     with engine.connect() as conn:
@@ -164,6 +192,9 @@ def dolt_merge(engine, branch):
         print("\tFast Forward: " + str(fast_forward))
         print("\tConflicts: " + str(conflicts))
 
+'''
+Prints out the commit log. 
+'''
 def print_commit_log(engine):
     # Examine a dolt system table, dolt_log, using reflection
     metadata_obj = MetaData()
@@ -183,6 +214,9 @@ def print_commit_log(engine):
             message     = row[2]
             print("\t" + commit_hash + ": " + message + " by " + author)
 
+'''
+Prints out the current status of the staged and working set. 
+'''
 def print_status(engine):
     metadata_obj = MetaData()
     dolt_status = Table("dolt_status", metadata_obj, autoload_with=engine)
@@ -200,6 +234,9 @@ def print_status(engine):
         else:
             print("\tNo tables modified")
 
+'''
+Prints out the current/active branch the session is on.
+'''
 def print_active_branch(engine):
     stmt = text("select active_branch()")
     with engine.connect() as conn:
@@ -207,7 +244,10 @@ def print_active_branch(engine):
         rows = results.fetchall()
         active_branch = rows[0][0]
         print("Active branch: " + active_branch)
-            
+
+'''
+Prints out the diff of given table between the HEAD and WORKING set.
+'''
 def print_diff(engine, table):
     metadata_obj = MetaData()
 
@@ -225,7 +265,10 @@ def print_diff(engine, table):
             row_dict = row._asdict()
             # Then I use pprint to display the results
             pprint(row_dict)
-    
+
+'''
+Prints out the tables in the database.
+'''
 def print_tables(engine):
     # Raw SQL here to show what we've done
     with engine.connect() as conn:
